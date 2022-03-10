@@ -1,0 +1,5 @@
+load module insmod hello_mod.ko
+unload module rmmod hello_mod.ko
+
+ex2 - dmesg -n 5
+
