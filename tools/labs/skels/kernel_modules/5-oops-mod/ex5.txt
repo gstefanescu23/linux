@@ -1,0 +1,3 @@
+daca dam insmod module se incearca incarcare intr-o zona de memorie care nu exista => kernel oops
+daca dam rmmod module nu putem pt ca exista referinte ale modulului imposibil de sters
+deci nu se poate face unload la modul
