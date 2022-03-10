@@ -1,0 +1,3 @@
+pentru a pasa parametru modulului cand se face load dam valoarea "tired" pt str astfel:
+insmod cmd_mod.ko str="tired"
+rmmod cmd_mod.ko
