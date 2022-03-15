@@ -1,0 +1,9 @@
+dupa load module:
+
+root@qemux86:~/skels/kernel_api/4-list# rmmod list.ko 
+before exiting: [ 
+(1, 4294905681) 
+(0, 4294905681) 
+(208, 4294905681) 
+(233, 4294905681) 
+]
