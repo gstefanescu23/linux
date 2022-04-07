@@ -35,6 +35,7 @@ static int __init timer_init(void)
 	timer_setup(&timer, timer_handler, 0);
 
 	/* TODO 1: schedule timer for the first time */
+	mod_timer(&timer, jiffies + TIMER_TIMEOUT * HZ);
 
 	return 0;
 }
