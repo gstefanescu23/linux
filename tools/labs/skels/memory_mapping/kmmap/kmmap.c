@@ -74,12 +74,22 @@ static int my_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	int ret;
 	long length = vma->vm_end - vma->vm_start;
+	unsigned long pfn;
+	unsigned long len;
 
 	/* do not map more than we can */
 	if (length > NPAGES * PAGE_SIZE)
 		return -EIO;
 
 	/* TODO 1: map the whole physically contiguous area in one piece */
+	pfn = virt_to_phys((void *)kmalloc_area)>>PAGE_SHIFT;
+        len = vma->vm_end - vma->vm_start;
+        ret = remap_pfn_range(vma, vma->vm_start, pfn, len, vma->vm_page_prot);
+
+        if (ret < 0) {
+                pr_err("could not map the address area\n");
+                return -EIO;
+        }
 
 	return 0;
 }
@@ -106,12 +116,15 @@ static int my_seq_show(struct seq_file *seq, void *v)
 	/* TODO 3: Release mm_struct */
 
 	/* TODO 3: write the total count to file  */
+	
 	return 0;
 }
 
 static int my_seq_open(struct inode *inode, struct file *file)
 {
 	/* TODO 3: Register the display function */
+
+	return 0;
 }
 
 static const struct proc_ops my_proc_ops = {
@@ -125,6 +138,8 @@ static int __init my_init(void)
 {
 	int ret = 0;
 	int i;
+	char *mem;
+
 	/* TODO 3: create a new entry in procfs */
 
 	ret = register_chrdev_region(MKDEV(MY_MAJOR, 0), 1, "mymap");
@@ -134,12 +149,25 @@ static int __init my_init(void)
 	}
 
 	/* TODO 1: allocate NPAGES+2 pages using kmalloc */
+	mem = kmalloc(PAGE_SIZE * (NPAGES + 2), GFP_KERNEL);
 
+        if (!mem)
+                return mem;
+	
 	/* TODO 1: round kmalloc_ptr to nearest page start address */
-
+	kmalloc_area = (char*) PAGE_ALIGN((int)kmalloc_ptr);
+	
 	/* TODO 1: mark pages as reserved */
+	for(i = 0; i < (NPAGES + 2) * PAGE_SIZE; i += PAGE_SIZE)
+                SetPageReserved(virt_to_page(((unsigned long)mem) + i));
 
 	/* TODO 1: write data in each page */
+	for (i = 0; i < (NPAGES + 2) * PAGE_SIZE; i += PAGE_SIZE) {
+		kmalloc_area[i] = 0xaa;
+		kmalloc_area[i + 1] = 0xbb;
+		kmalloc_area[i + 2] = 0xcc;
+		kmalloc_area[i + 3] = 0xdd;
+	}
 
 	/* Init device. */
 	cdev_init(&mmap_cdev, &mmap_fops);
@@ -164,10 +192,14 @@ out:
 static void __exit my_exit(void)
 {
 	int i;
-
+	char *mem;
 	cdev_del(&mmap_cdev);
 
 	/* TODO 1: clear reservation on pages and free mem. */
+	for(i = 0; i < (NPAGES + 2)  * PAGE_SIZE; i += PAGE_SIZE)
+                ClearPageReserved(virt_to_page(((unsigned long)mem) + i));
+
+        kfree(mem);
 
 	unregister_chrdev_region(MKDEV(MY_MAJOR, 0), 1);
 	/* TODO 3: remove proc entry */
