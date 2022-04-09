@@ -79,6 +79,17 @@ static int my_mmap(struct file *filp, struct vm_area_struct *vma)
 		return -EIO;
 
 	/* TODO 1: map pages individually */
+	while (length > 0) {
+		pfn = vmalloc_to_pfn(vmalloc_area_ptr);
+		ret = remap_pfn_range(vma, start, pfn, PAGE_SIZE, PAGE_SHARED);
+		
+		if (ret < 0)
+			return ret;
+		
+		start += PAGE_SIZE;
+		vmalloc_area_ptr += PAGE_SIZE;
+		length -= PAGE_SIZE;
+	}
 
 	return 0;
 }
@@ -105,12 +116,15 @@ static int my_seq_show(struct seq_file *seq, void *v)
 	/* TODO 3: Release mm_struct */
 
 	/* TODO 3: write the total count to file  */
+	
 	return 0;
 }
 
 static int my_seq_open(struct inode *inode, struct file *file)
 {
 	/* TODO 3: Register the display function */
+	
+	return 0;
 }
 
 static const struct proc_ops my_proc_ops = {
@@ -124,6 +138,8 @@ static int __init my_init(void)
 {
 	int ret = 0;
 	int i;
+	static char *vmalloc_area;
+	
 	/* TODO 3: create a new entry in procfs */
 
 	ret = register_chrdev_region(MKDEV(MY_MAJOR, 0), 1, "mymap");
@@ -133,10 +149,25 @@ static int __init my_init(void)
 	}
 
 	/* TODO 1: allocate NPAGES using vmalloc */
+	unsigned long pfn = vmalloc_to_pfn(vmalloc_area);
+	
+	/*if (vmalloc_area == NULL) {
+		ret = -ENOMEM;
+		pr_err("could not allocate memory\n");
+		goto out_unreg;
+	}*/
 
 	/* TODO 1: mark pages as reserved */
+	for (i = 0; i < NPAGES * PAGE_SIZE; i += PAGE_SIZE)
+		SetPageReserved(vmalloc_to_page(vmalloc_area+i));
 
 	/* TODO 1: write data in each page */
+	for (i = 0; i < NPAGES * PAGE_SIZE; i += PAGE_SIZE) {
+		vmalloc_area[i] = 0xaa;
+		vmalloc_area[i + 1] = 0xbb;
+		vmalloc_area[i + 2] = 0xcc;
+		vmalloc_area[i + 3] = 0xdd;
+	}
 
 	cdev_init(&mmap_cdev, &mmap_fops);
 	ret = cdev_add(&mmap_cdev, MKDEV(MY_MAJOR, 0), 1);
@@ -164,6 +195,10 @@ static void __exit my_exit(void)
 	cdev_del(&mmap_cdev);
 
 	/* TODO 1: clear reservation on pages and free mem.*/
+	for (i = 0; i < NPAGES * PAGE_SIZE; i += PAGE_SIZE)
+		ClearPageReserved(vmalloc_to_page(vmalloc_area+i));
+	
+	vfree(vmalloc_area);
 
 	unregister_chrdev_region(MKDEV(MY_MAJOR, 0), 1);
 	/* TODO 3: remove proc entry */
