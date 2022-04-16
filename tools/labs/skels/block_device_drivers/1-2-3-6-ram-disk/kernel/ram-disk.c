@@ -61,12 +61,17 @@ static void my_block_transfer(struct my_block_dev *dev, sector_t sector,
 		unsigned long len, char *buffer, int dir)
 {
 	unsigned long offset = sector * KERNEL_SECTOR_SIZE;
+	unsigned long nbytes = nsect*KERNEL_SECTOR_SIZE;
 
 	/* check for read/write beyond end of block device */
 	if ((offset + len) > dev->size)
 		return;
 
 	/* TODO 3: read/write to dev buffer depending on dir */
+	if (write)
+		memcpy(dev->data + offset, buffer, nbytes);
+	else
+		memcpy(buffer, dev->data + offset, nbytes);
 }
 
 /* to transfer data using bio structures enable USE_BIO_TRANFER */
@@ -84,6 +89,8 @@ static blk_status_t my_block_request(struct blk_mq_hw_ctx *hctx,
 {
 	struct request *rq;
 	struct my_block_dev *dev = hctx->queue->queuedata;
+	struct bio *bio;
+	int dir = bio_data_dir(bio);
 
 	/* TODO 2: get pointer to request */
 	rq = bd->rq;
@@ -98,11 +105,23 @@ static blk_status_t my_block_request(struct blk_mq_hw_ctx *hctx,
                 blk_mq_end_request(rq, BLK_STS_IOERR);
         }
 	
+	bio_for_each_segment(bvec, bio, i) {
+        sector_t sector = i.bi_sector;
+        char *buffer = kmap_atomic(bvec.bv_page);
+        unsigned long offset = bvec.bv_offset;
+        size_t len = bvec.bv_len;
+
+        /* process mapped buffer */
+        my_block_transfer(dev, sector, len, buffer + offset, dir);
+
+        kunmap_atomic(buffer);
+    }	
 	
 #if USE_BIO_TRANSFER == 1
 	/* TODO 6: process the request by calling my_xfer_request */
 #else
 	/* TODO 3: process the request by calling my_block_transfer */
+	my_block_transfer(dev, sector, len, buffer + offset, dir);
 #endif
 
 	/* TODO 2: end request successfully */
