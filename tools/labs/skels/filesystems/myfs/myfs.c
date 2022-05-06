@@ -27,6 +27,11 @@ static int myfs_create(struct inode *dir, struct dentry *dentry,
 static int myfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode);
 
 /* TODO 2: define super_operations structure */
+static const struct super_operations myfs_ops = {
+        .statfs         = simple_statfs,
+        .drop_inode     = generic_drop_inode,
+	.show_options   = myfs_show_options,
+};
 
 static const struct inode_operations myfs_dir_inode_operations = {
 	/* TODO 5: Fill dir inode operations structure. */
@@ -96,6 +101,11 @@ static int myfs_fill_super(struct super_block *sb, void *data, int silent)
 	 *   - super operations
 	 *   - maxbytes
 	 */
+	sb->s_maxbytes = MAX_LFS_FILESIZE;
+        sb->s_blocksize = MYFS_BLOCKSIZE;
+        sb->s_blocksize_bits = MYFS_BLOCKSIZE_BITS;
+        sb->s_magic = MYFS_MAGIC;
+        sb->s_op = &myfs_ops;
 
 	/* mode = directory & access rights (755) */
 	root_inode = myfs_get_inode(sb, NULL,
