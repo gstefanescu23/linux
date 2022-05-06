@@ -435,17 +435,22 @@ static int minfs_fill_super(struct super_block *s, void *data, int silent)
 	 * the device, i.e. the block with the index 0. This is the index
 	 * to be passed to sb_bread().
 	 */
-
+	bh = sb_bread(s, MINFS_SUPER_BLOCK);
+        if (bh == NULL)
+                goto out_bad_sb;
 	/* TODO 2: interpret read data as minfs_super_block */
-
+	ms = (struct minfs_super_block *) bh->b_data;
 	/* TODO 2: check magic number with value defined in minfs.h. jump to out_bad_magic if not suitable */
-
+	if (ms->magic != MINFS_MAGIC)
+                goto out_bad_magic;
 	/* TODO 2: fill super_block with magic_number, super_operations */
-
+	s->s_magic = MINFS_MAGIC;
+        s->s_op = &minfs_ops;
 	/* TODO 2: Fill sbi with rest of information from disk superblock
 	 * (i.e. version).
 	 */
-
+	sbi->version = ms->version;
+        sbi->imap = ms->imap;
 	/* allocate root inode and root dentry */
 	/* TODO 2: use myfs_get_inode instead of minfs_iget */
 	root_inode = minfs_iget(s, MINFS_ROOT_INODE);
