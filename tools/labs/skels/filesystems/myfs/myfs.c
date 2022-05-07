@@ -30,11 +30,18 @@ static int myfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode);
 static const struct super_operations myfs_ops = {
         .statfs         = simple_statfs,
         .drop_inode     = generic_drop_inode,
-	.show_options   = myfs_show_options,
 };
 
 static const struct inode_operations myfs_dir_inode_operations = {
 	/* TODO 5: Fill dir inode operations structure. */
+	.create         = myfs_create,
+        .lookup         = simple_lookup,
+        .link           = simple_link,
+        .unlink         = simple_unlink,
+        .mkdir          = myfs_mkdir,
+        .rmdir          = simple_rmdir,
+        .mknod          = myfs_mknod,
+        .rename         = simple_rename,
 };
 
 static const struct file_operations myfs_file_operations = {
@@ -69,6 +76,7 @@ struct inode *myfs_get_inode(struct super_block *sb, const struct inode *dir,
         inode->i_ino = 1;
 
 	/* TODO 5: Init i_ino using get_next_ino */
+	inode->i_ino = get_next_ino();
 
 	/* TODO 6: Initialize address space operations. */
 
@@ -80,6 +88,7 @@ struct inode *myfs_get_inode(struct super_block *sb, const struct inode *dir,
 		/* TODO 5: use myfs_dir_inode_operations for inode
 		 * operations (i_op).
 		 */
+		inode->i_op = &myfs_dir_inode_operations;
 
 		/* TODO 3: directory inodes start off with i_nlink == 2 (for "." entry).
 		 * Directory link count should be incremented (use inc_nlink).
@@ -95,6 +104,39 @@ struct inode *myfs_get_inode(struct super_block *sb, const struct inode *dir,
 }
 
 /* TODO 5: Implement myfs_mknod, myfs_create, myfs_mkdir. */
+static int myfs_mknod(struct inode *dir,
+                struct dentry *dentry, umode_t mode, dev_t dev)
+{
+        struct inode *inode = myfs_get_inode(dir->i_sb, dir, mode);
+
+        if (inode == NULL)
+                return -ENOSPC;
+
+        d_instantiate(dentry, inode);
+        dget(dentry);
+        dir->i_mtime = dir->i_ctime = current_time(inode);
+
+        return 0;
+}
+
+static int myfs_create(struct inode *dir, struct dentry *dentry,
+                umode_t mode, bool excl)
+{
+        return myfs_mknod(dir, dentry, mode | S_IFREG, 0);
+}
+
+static int myfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
+{
+        int ret;
+
+        ret = myfs_mknod(dir, dentry, mode | S_IFDIR, 0);
+        if (ret != 0)
+                return ret;
+
+        inc_nlink(dir);
+
+        return 0;
+}
 
 static int myfs_fill_super(struct super_block *sb, void *data, int silent)
 {
@@ -155,6 +197,7 @@ static int __init myfs_init(void)
 	int err;
 
 	/* TODO 1: register */
+	err = register_filesystem(&myfs_fs_type);
 	if (err) {
 		printk(LOG_LEVEL "register_filesystem failed\n");
 		return err;
