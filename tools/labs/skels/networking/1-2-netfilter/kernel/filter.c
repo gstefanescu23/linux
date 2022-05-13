@@ -50,6 +50,15 @@ static int test_daddr(unsigned int dst_addr)
 }
 
 /* TODO 1: netfilter hook function */
+static unsigned int my_nf_hookfn(void *priv,
+              struct sk_buff *skb,
+              const struct nf_hook_state *state)
+{
+      /* process packet */
+      //...
+
+      return NF_ACCEPT;
+}
 
 static int my_open(struct inode *inode, struct file *file)
 {
@@ -83,6 +92,24 @@ static const struct file_operations my_fops = {
 };
 
 /* TODO 1: define netfilter hook operations structure */
+/*
+struct nf_hook_ops {
+      // User fills in from here down.
+      nf_hookfn               *hook;
+      struct net_device       *dev;
+      void                    *priv;
+      u_int8_t                pf;
+      unsigned int            hooknum;
+      // Hooks are ordered in ascending priority.
+      int                     priority;
+};
+*/
+static struct nf_hook_ops my_nfho = {
+      .hook        = my_nf_hookfn,
+      .hooknum     = NF_INET_LOCAL_OUT,
+      .pf          = PF_INET,
+      .priority    = NF_IP_PRI_FIRST
+};
 
 int __init my_hook_init(void)
 {
@@ -101,8 +128,8 @@ int __init my_hook_init(void)
 	cdev_add(&my_cdev, MKDEV(MY_MAJOR, 0), 1);
 
 	/* TODO 1: register netfilter hook */
-
-	return 0;
+        return nf_register_net_hook(&init_net, &my_nfho);
+	//return 0;
 
 out:
 	/* cleanup */
@@ -115,6 +142,7 @@ out:
 void __exit my_hook_exit(void)
 {
 	/* TODO 1: unregister hook */
+	nf_unregister_net_hook(&init_net, &my_nfho);
 
 	/* cleanup device */
 	cdev_del(&my_cdev);
