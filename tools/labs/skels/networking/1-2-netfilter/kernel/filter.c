@@ -45,6 +45,10 @@ static int test_daddr(unsigned int dst_addr)
 	/* TODO 2: return non-zero if address has been set
 	 * *and* matches dst_addr
 	 */
+	if (atomic_read(&ioctl_set) == 1)
+                ret = (ioctl_set_addr == dst_addr);
+        else
+                ret = 1;
 
 	return ret;
 }
@@ -75,6 +79,8 @@ static long my_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case MY_IOCTL_FILTER_ADDRESS:
 		/* TODO 2: set filter address from arg */
+		if( copy_from_user(&mid, (my_ioctl_data *) arg, sizeof(my_ioctl_data)) )
+			return -EFAULT;
 		break;
 
 	default:
@@ -92,18 +98,6 @@ static const struct file_operations my_fops = {
 };
 
 /* TODO 1: define netfilter hook operations structure */
-/*
-struct nf_hook_ops {
-      // User fills in from here down.
-      nf_hookfn               *hook;
-      struct net_device       *dev;
-      void                    *priv;
-      u_int8_t                pf;
-      unsigned int            hooknum;
-      // Hooks are ordered in ascending priority.
-      int                     priority;
-};
-*/
 static struct nf_hook_ops my_nfho = {
       .hook        = my_nf_hookfn,
       .hooknum     = NF_INET_LOCAL_OUT,
