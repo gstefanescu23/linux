@@ -64,30 +64,50 @@ int __init my_tcp_sock_init(void)
 	err = sock_create_kern(&init_net, PF_INET, SOCK_STREAM, IPPROTO_TCP, &sock);
 	if (err < 0) {
 		/* handle error */
-		printk("can't create listening socket\n");
+		printk(LOG_LEVEL "can't create listening socket\n");
+		goto out;
 	}
 	/* TODO 1: bind socket to loopback on port MY_TCP_PORT */
 	err = sock->ops->bind(sock, (struct sockaddr *) &addr, addrlen);
         if (err < 0) {
         	/* handle error */
-		printk("can't bind socket\n");
-        }
+		printk(LOG_LEVEL "can't bind socket\n");
+        	goto out_release;
+	}
 	/* TODO 1: start listening */
 	err = sock->ops->listen(sock, LISTEN_BACKLOG);
         if (err < 0) {
 		/* handle error */
-		printk("can't start listening\n");
+		printk(LOG_LEVEL "can't start listening\n");
+		goto out_release;
 	}
 	/* TODO 2: create new socket for the accepted connection */
-
+	err = sock_create_lite(PF_INET, SOCK_STREAM, IPPROTO_TCP, &new_sock);
+        if (err < 0) {
+                printk(LOG_LEVEL "can't create socket\n");
+                goto out;
+        }
+	new_sock->ops = sock->ops;
 	/* TODO 2: accept a connection */
-
+	err = sock->ops->accept(sock, new_sock, 0, true);
+	if (err < 0) {
+                printk(LOG_LEVEL "can't accept connection\n");
+                goto out_release_new_sock;
+        }
 	/* TODO 2: get the address of the peer and print it */
+	err = sock->ops->getname(new_sock, (struct sockaddr *) &raddr, 1);
+	if (err < 0) {
+                printk(LOG_LEVEL "can't get peer addr\n");
+                goto out_release_new_sock;
+        }
+
+	print_sock_address(raddr);
 
 	return 0;
 
 out_release_new_sock:
 	/* TODO 2: cleanup socket for accepted connection */
+	sock_release(new_sock);
 out_release:
 	/* TODO 1: cleanup listening socket */
 	sock_release(sock);
@@ -98,7 +118,7 @@ out:
 void __exit my_tcp_sock_exit(void)
 {
 	/* TODO 2: cleanup socket for accepted connection */
-
+	sock_release(new_sock);
 	/* TODO 1: cleanup listening socket */
 	sock_release(new_sock);
 }
