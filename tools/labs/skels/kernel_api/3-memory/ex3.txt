@@ -1,0 +1,7 @@
+dupa load module:
+
+root@qemux86:~# rmmod skels/kernel_api/3-memory/memory.ko 
+pid for ti1 is 233 - timestamp for ti1 is 4294902630
+pid for ti2 is 208 - timestamp for ti2 is 4294902630
+pid for ti3 is 0 - timestamp for ti3 is 4294902630
+pid for ti4 is 1 - timestamp for ti4 is 4294902630

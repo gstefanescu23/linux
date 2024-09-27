@@ -1,0 +1,15 @@
+rezultate load si unload module:
+
+root@qemux86:~/skels/kernel_api/5-list-full# insmod list-full.ko
+list_full: loading out-of-tree module taints kernel.
+after first add: [ 
+(1, 4294902981) 
+(0, 4294902981) 
+(208, 4294902981) 
+(232, 4294902981) 
+]
+
+root@qemux86:~/skels/kernel_api/5-list-full# rmmod list-full.ko
+after removing expired: [ 
+(232, 4294902981) 
+]
